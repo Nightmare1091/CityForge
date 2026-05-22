@@ -7,6 +7,30 @@ Build complete cities with roads, zones, and buildings — then export directly 
 
 ---
 
+## v0.3 — Intersections & Midpoint Snap
+
+Full intersection system with automatic road subdivision and snapping at three points per road segment.
+
+### What's new
+- Automatic road intersections (X and T types)
+- Roads subdivide at intersection points — no overlaps
+- Every road gets a snappable midpoint node automatically
+- Curved roads correctly subdivided using de Casteljau algorithm
+- Simplified road network architecture (AddCurvedRoad merged into AddRoad)
+
+### Demo
+
+**Roads with snappable midpoint**  
+![Curve midpoint snap](gifs/v0.3-snappable-middle-and-curve-control-point.gif)
+
+**X intersection**  
+![X intersection](gifs/v0.3-x-intersection.gif)
+
+**T intersection using midpoint snap**  
+![T intersection](gifs/v0.3-t-intersection.gif)
+
+---
+
 ## v0.2 — Snap & Junctions
 
 Road network now has proper node-based architecture with snapping and junction geometry.
@@ -53,8 +77,11 @@ First working version of the road placement system.
 - [x] Road placement (straight + curved)
 - [x] RTS camera
 - [x] Snap to existing nodes
-- [ ] Road intersections
-- [ ] Lot detection
+- [x] Snap to curve control points
+- [x] Snap to road midpoints
+- [x] Road intersections (X and T)
+- [ ] Road placement validation (red preview on invalid placement)
+- [ ] Lot detection (closed areas become buildable lots)
 - [ ] Lot subdivision
 - [ ] Zoning system
 - [ ] Procedural buildings
