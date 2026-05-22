@@ -7,6 +7,24 @@ Build complete cities with roads, zones, and buildings — then export directly 
 
 ---
 
+## v0.2 — Snap & Junctions
+
+Road network now has proper node-based architecture with snapping and junction geometry.
+
+### What's new
+- Node-based road network (`RoadNetwork`, `RoadNode`, `RoadEdge`)
+- Snap to existing road endpoints with visual indicator
+- Automatic junction discs fill gaps between connected roads
+- Edges trim correctly at junctions — no overlaps or gaps
+- Junctions rebuild dynamically when new roads connect
+
+### Demo
+
+**Snap + junctions**  
+![Snap and junctions](gifs/v0.2-snap-junctions.gif)
+
+---
+
 ## v0.1 — Road System
 
 First working version of the road placement system.
@@ -34,7 +52,7 @@ First working version of the road placement system.
 ## Roadmap
 - [x] Road placement (straight + curved)
 - [x] RTS camera
-- [ ] Snap to existing nodes
+- [x] Snap to existing nodes
 - [ ] Road intersections
 - [ ] Lot detection
 - [ ] Lot subdivision
