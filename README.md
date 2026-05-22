@@ -21,13 +21,13 @@ First working version of the road placement system.
 ### Demo
 
 **Camera controls**  
-![Camera](gifs/v0.1-camera.gif)
+![Camera](gifs/SimpleCameraSystem.gif)
 
 **Straight roads**  
-![Straight roads](gifs/v0.1-straight.gif)
+![Straight roads](gifs/StraightRoads.gif)
 
 **Curved roads**  
-![Curved roads](gifs/v0.1-curved.gif)
+![Curved roads](gifs/CurveRoads.gif)
 
 ---
 
