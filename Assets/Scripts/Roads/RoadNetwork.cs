@@ -23,19 +23,114 @@ public class RoadNetwork : MonoBehaviour
         RoadNode startNode = GetOrCreateNode(start);
         RoadNode endNode = GetOrCreateNode(end);
 
-        RoadEdge edge = new RoadEdge(startNode, endNode, control, width, segments);
+        Vector3 midPoint = control.HasValue
+            ? 0.25f * start + 0.5f * control.Value + 0.25f * end
+            : Vector3.Lerp(start, end, 0.5f);
 
-        startNode.edges.Add(edge);
-        endNode.edges.Add(edge);
-        edges.Add(edge);
+        RoadNode midNode = GetOrCreateNode(midPoint);
 
-        var affectedEdges = new HashSet<RoadEdge>();
-        foreach (var e in startNode.edges) affectedEdges.Add(e);
-        foreach (var e in endNode.edges) affectedEdges.Add(e);
-        foreach (var e in affectedEdges) e.BuildMesh(roadMaterial);
+        Vector3? controlA = null;
+        Vector3? controlB = null;
+
+        if (control.HasValue)
+        {
+            controlA = Vector3.Lerp(start, control.Value, 0.5f);
+            controlB = Vector3.Lerp(control.Value, end, 0.5f);
+        }
+
+        RoadEdge edgeA = new RoadEdge(startNode, midNode, controlA, width, segments / 2);
+        RoadEdge edgeB = new RoadEdge(midNode, endNode, controlB, width, segments / 2);
+
+        startNode.edges.Add(edgeA);
+        midNode.edges.Add(edgeA);
+        midNode.edges.Add(edgeB);
+        endNode.edges.Add(edgeB);
+
+        edges.Add(edgeA);
+        edges.Add(edgeB);
+
+        var affected = new HashSet<RoadEdge> { edgeA, edgeB };
+        foreach (var e in startNode.edges) affected.Add(e);
+        foreach (var e in midNode.edges) affected.Add(e);
+        foreach (var e in endNode.edges) affected.Add(e);
+        foreach (var e in affected) e.BuildMesh(roadMaterial);
 
         startNode.RebuildJunction(roadMaterial);
+        midNode.RebuildJunction(roadMaterial);
         endNode.RebuildJunction(roadMaterial);
+
+        ProcessIntersections(edgeA);
+        ProcessIntersections(edgeB);
+    }
+
+    void ProcessIntersections(RoadEdge newEdge)
+    {
+        var hits = IntersectionDetector.FindIntersections(newEdge, edges);
+        if (hits.Count == 0) return;
+
+        var nodesToRebuild = new HashSet<RoadNode>();
+
+        foreach (var hit in hits)
+        {
+            RoadNode intersectionNode = SplitEdge(hit.edge, hit.point);
+            nodesToRebuild.Add(intersectionNode);
+        }
+
+        for (int i = hits.Count - 1; i >= 0; i--)
+        {
+            RoadNode intersectionNode = GetOrCreateNode(hits[i].point);
+            nodesToRebuild.Add(intersectionNode);
+
+            if (edges.Contains(newEdge))
+            {
+                SplitEdge(newEdge, hits[i].point);
+            }
+        }
+
+        var affectedEdges = new HashSet<RoadEdge>();
+        foreach (var node in nodesToRebuild)
+        {
+            foreach (var e in node.edges) affectedEdges.Add(e);
+        }
+        foreach (var e in affectedEdges) e.BuildMesh(roadMaterial);
+        foreach (var node in nodesToRebuild) node.RebuildJunction(roadMaterial);
+    }
+
+    RoadNode SplitEdge(RoadEdge edge, Vector3 splitPoint)
+    {
+        RoadNode newNode = GetOrCreateNode(splitPoint);
+        if (newNode == edge.startNode || newNode == edge.endNode) return newNode;
+
+        RoadNode oldStart = edge.startNode;
+        RoadNode oldEnd = edge.endNode;
+
+        oldStart.edges.Remove(edge);
+        oldEnd.edges.Remove(edge);
+        edges.Remove(edge);
+        if (edge.edgeObject != null) Object.Destroy(edge.edgeObject);
+
+        Vector3? controlA = null;
+        Vector3? controlB = null;
+
+        if (edge.controlPoint.HasValue)
+        {
+            Vector3 cp = edge.controlPoint.Value;
+            controlA = Vector3.Lerp(oldStart.position, cp, 0.5f);
+            controlB = Vector3.Lerp(cp, oldEnd.position, 0.5f);
+        }
+
+        RoadEdge edgeA = new RoadEdge(oldStart, newNode, controlA, edge.roadWidth, edge.meshSegments / 2);
+        RoadEdge edgeB = new RoadEdge(newNode, oldEnd, controlB, edge.roadWidth, edge.meshSegments / 2);
+
+        oldStart.edges.Add(edgeA);
+        newNode.edges.Add(edgeA);
+        newNode.edges.Add(edgeB);
+        oldEnd.edges.Add(edgeB);
+
+        edges.Add(edgeA);
+        edges.Add(edgeB);
+
+        return newNode;
     }
 
     RoadNode GetOrCreateNode(Vector3 position)
