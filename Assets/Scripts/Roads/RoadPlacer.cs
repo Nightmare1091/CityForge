@@ -12,7 +12,7 @@ public class RoadPlacer : MonoBehaviour
     [Header("Settings")]
     public float roadWidth = 8f;
     public int meshSegments = 20;
-    public Material roadMaterial;
+    //public Material roadMaterial;
     public Material previewMaterial;
     public LayerMask groundLayer;
 
@@ -39,7 +39,8 @@ public class RoadPlacer : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape)) { Reset(); return; }
 
-        Vector3 mousePos = GetGroundPosition();
+        Vector3 rawPos = GetGroundPosition();
+        Vector3 mousePos = SnapManager.Instance.GetSnappedPosition(rawPos, out bool snapped);
 
         if (stage == DrawStage.Idle)
         {
@@ -112,17 +113,7 @@ public class RoadPlacer : MonoBehaviour
 
     void ConfirmRoad(Vector3 start, Vector3? control, Vector3 end)
     {
-        List<Vector3> points = control.HasValue
-            ? GenerateCurvePoints(start, control.Value, end)
-            : GenerateStraightPoints(start, end);
-
-        GameObject road = new GameObject("Road");
-        road.AddComponent<MeshFilter>().mesh = GenerateMesh(points);
-        road.AddComponent<MeshRenderer>().material = roadMaterial;
-        road.AddComponent<MeshCollider>().sharedMesh =
-            road.GetComponent<MeshFilter>().sharedMesh;
-        road.tag = "Road";
-
+        RoadNetwork.Instance.AddRoad(start, control, end, roadWidth, meshSegments);
         RegisterSpline(start, control, end);
     }
 
@@ -216,6 +207,7 @@ public class RoadPlacer : MonoBehaviour
     {
         stage = DrawStage.Idle;
         previewObj.SetActive(false);
+        SnapManager.Instance.HideIndicator();
     }
 
     Vector3 GetGroundPosition()
