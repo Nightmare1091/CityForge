@@ -34,6 +34,7 @@ public class RoadEdge
         if (points.Count < 2) return;
 
         edgeObject = new GameObject("RoadEdge");
+        edgeObject.layer = LayerMask.NameToLayer("Road");
         edgeObject.AddComponent<MeshFilter>().mesh = GenerateMesh(points);
         edgeObject.AddComponent<MeshRenderer>().material = material;
         edgeObject.AddComponent<MeshCollider>().sharedMesh =
@@ -127,5 +128,17 @@ public class RoadEdge
         mesh.uv = uvs.ToArray();
         mesh.RecalculateNormals();
         return mesh;
+    }
+
+    public void SetHighlight(Material normalMaterial, Material invalidMaterial)
+    {
+        if (edgeObject == null) return;
+        edgeObject.GetComponent<MeshRenderer>().material = invalidMaterial;
+    }
+
+    public void ClearHighlight(Material normalMaterial)
+    {
+        if (edgeObject == null) return;
+        edgeObject.GetComponent<MeshRenderer>().material = normalMaterial;
     }
 }

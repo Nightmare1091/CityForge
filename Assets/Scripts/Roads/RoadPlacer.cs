@@ -1,7 +1,8 @@
+using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
-using Unity.Mathematics;
-using System.Collections.Generic;
+using UnityEngine.Splines.ExtrusionShapes;
 
 [RequireComponent(typeof(SplineContainer))]
 public class RoadPlacer : MonoBehaviour
@@ -12,9 +13,13 @@ public class RoadPlacer : MonoBehaviour
     [Header("Settings")]
     public float roadWidth = 8f;
     public int meshSegments = 20;
-    //public Material roadMaterial;
-    public Material previewMaterial;
     public LayerMask groundLayer;
+
+    [Header("Preview Materials")]
+    public Material previewValid;
+    public Material previewInvalid;
+
+    private bool placementIsValid = true;
 
     [HideInInspector] public RoadMode currentMode = RoadMode.None;
 
@@ -40,7 +45,8 @@ public class RoadPlacer : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape)) { Reset(); return; }
 
         Vector3 rawPos = GetGroundPosition();
-        Vector3 mousePos = SnapManager.Instance.GetSnappedPosition(rawPos, out bool snapped);
+        Vector3 gridPos = GridSystem.Instance.Snap(rawPos);
+        Vector3 mousePos = SnapManager.Instance.GetSnappedPosition(gridPos, out bool snapped);
 
         if (stage == DrawStage.Idle)
         {
@@ -53,16 +59,22 @@ public class RoadPlacer : MonoBehaviour
         else if (stage == DrawStage.DefiningEnd)
         {
             UpdateStraightPreview(startPoint, mousePos);
+            UpdatePreviewValidity(startPoint, null, mousePos);
+            Vector3 roadDir = (mousePos - startPoint).normalized;
+            float roadLength = Vector3.Distance(startPoint, mousePos);
+            GridVisualizer.Instance.UpdateGrid(startPoint, roadDir, roadLength, roadWidth);
 
             if (Input.GetMouseButtonDown(0))
             {
+                if (!placementIsValid) return;
+
                 if (currentMode == RoadMode.Straight)
                 {
                     ConfirmRoad(startPoint, null, mousePos);
-                    startPoint = mousePos; 
+                    startPoint = mousePos;
                     stage = DrawStage.DefiningEnd;
                 }
-                else 
+                else
                 {
                     controlPoint = mousePos;
                     stage = DrawStage.DefiningControl;
@@ -73,11 +85,18 @@ public class RoadPlacer : MonoBehaviour
         else if (stage == DrawStage.DefiningControl)
         {
             UpdateCurvedPreview(startPoint, mousePos, controlPoint);
+            UpdatePreviewValidity(startPoint, mousePos, controlPoint);
+            Vector3 curveDir = (controlPoint - startPoint).normalized;
+            float curveLength = Vector3.Distance(startPoint, controlPoint) + Vector3.Distance(controlPoint, mousePos);
+            GridVisualizer.Instance.UpdateGrid(startPoint, curveDir, curveLength, roadWidth);
+            UpdatePreviewValidity(startPoint, mousePos, controlPoint);
 
             if (Input.GetMouseButtonDown(0))
             {
+                if (!placementIsValid) return;
+
                 ConfirmRoad(startPoint, mousePos, controlPoint);
-                startPoint = controlPoint; 
+                startPoint = controlPoint;
                 stage = DrawStage.DefiningEnd;
             }
             else if (Input.GetMouseButtonDown(1)) Reset();
@@ -88,15 +107,31 @@ public class RoadPlacer : MonoBehaviour
     {
         currentMode = mode;
         Reset();
-        Debug.Log($"Road mode: {mode}");
+
+        if (mode != RoadMode.None)
+            GridVisualizer.Instance.Show();
+        else
+            GridVisualizer.Instance.Hide();
     }
 
     void CreatePreview()
     {
         previewObj = new GameObject("RoadPreview");
         previewObj.AddComponent<MeshFilter>();
-        previewObj.AddComponent<MeshRenderer>().material = previewMaterial;
+        previewObj.AddComponent<MeshRenderer>().material = previewValid;
         previewObj.SetActive(false);
+    }
+
+    void UpdatePreviewValidity(Vector3 start, Vector3? control, Vector3 end)
+    {
+        bool valid = RoadValidator.IsValidPlacement(
+            start, control, end,
+            roadWidth,
+            RoadNetwork.Instance.GetAllEdges()
+        );
+
+        placementIsValid = valid;
+        previewObj.GetComponent<MeshRenderer>().material = valid ? previewValid : previewInvalid;
     }
 
     void UpdateStraightPreview(Vector3 start, Vector3 end)
@@ -113,6 +148,8 @@ public class RoadPlacer : MonoBehaviour
 
     void ConfirmRoad(Vector3 start, Vector3? control, Vector3 end)
     {
+        if (!placementIsValid) return;
+
         RoadNetwork.Instance.AddRoad(start, control, end, roadWidth, meshSegments);
         RegisterSpline(start, control, end);
     }
@@ -208,6 +245,8 @@ public class RoadPlacer : MonoBehaviour
         stage = DrawStage.Idle;
         previewObj.SetActive(false);
         SnapManager.Instance.HideIndicator();
+        RoadNetwork.Instance.ClearAllHighlights();
+        GridVisualizer.Instance.Hide();
     }
 
     Vector3 GetGroundPosition()

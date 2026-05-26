@@ -7,6 +7,7 @@ public class RoadNetwork : MonoBehaviour
 
     [Header("Settings")]
     public Material roadMaterial;
+    public Material roadInvalidMaterial;
     public float mergeNodeRadius = 0.5f;
 
     private List<RoadNode> nodes = new List<RoadNode>();
@@ -16,6 +17,19 @@ public class RoadNetwork : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+    }
+
+    public void HighlightOverlappingEdges(List<RoadEdge> overlapping)
+    {
+        ClearAllHighlights();
+        foreach (var edge in overlapping)
+            edge.SetHighlight(roadMaterial, roadInvalidMaterial);
+    }
+
+    public void ClearAllHighlights()
+    {
+        foreach (var edge in edges)
+            edge.ClearHighlight(roadMaterial);
     }
 
     public void AddRoad(Vector3 start, Vector3? control, Vector3 end, float width, int segments)
@@ -72,33 +86,54 @@ public class RoadNetwork : MonoBehaviour
 
         foreach (var hit in hits)
         {
+            RoadNode existingNearby = FindNearbyNode(hit.point, roadMaterial != null ? 6f : 6f);
+            if (existingNearby != null)
+            {
+                nodesToRebuild.Add(existingNearby);
+                continue;
+            }
+
             RoadNode intersectionNode = SplitEdge(hit.edge, hit.point);
             nodesToRebuild.Add(intersectionNode);
         }
 
         for (int i = hits.Count - 1; i >= 0; i--)
         {
-            RoadNode intersectionNode = GetOrCreateNode(hits[i].point);
-            nodesToRebuild.Add(intersectionNode);
+            RoadNode existingNearby = FindNearbyNode(hits[i].point, 6f);
+            if (existingNearby != null) continue;
 
             if (edges.Contains(newEdge))
-            {
                 SplitEdge(newEdge, hits[i].point);
-            }
         }
 
         var affectedEdges = new HashSet<RoadEdge>();
         foreach (var node in nodesToRebuild)
-        {
             foreach (var e in node.edges) affectedEdges.Add(e);
-        }
+
         foreach (var e in affectedEdges) e.BuildMesh(roadMaterial);
         foreach (var node in nodesToRebuild) node.RebuildJunction(roadMaterial);
+    }
+
+    RoadNode FindNearbyNode(Vector3 position, float radius)
+    {
+        foreach (var node in nodes)
+        {
+            if (Vector2.Distance(
+                new Vector2(node.position.x, node.position.z),
+                new Vector2(position.x, position.z)) < radius)
+                return node;
+        }
+        return null;
     }
 
     RoadNode SplitEdge(RoadEdge edge, Vector3 splitPoint)
     {
         RoadNode newNode = GetOrCreateNode(splitPoint);
+        if (newNode == edge.startNode || newNode == edge.endNode) return newNode;
+
+        if (edge.startNode.edges.Count >= 4 || edge.endNode.edges.Count >= 4)
+            return null;
+        
         if (newNode == edge.startNode || newNode == edge.endNode) return newNode;
 
         RoadNode oldStart = edge.startNode;
@@ -154,5 +189,10 @@ public class RoadNetwork : MonoBehaviour
         foreach (var node in nodes)
             positions.Add(node.position);
         return positions;
+    }
+
+    public List<RoadEdge> GetAllEdges()
+    {
+        return edges;
     }
 }

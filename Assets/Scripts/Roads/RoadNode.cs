@@ -20,6 +20,7 @@ public class RoadNode
         float radius = GetJunctionRadius();
 
         nodeObject = new GameObject("RoadNode");
+        nodeObject.layer = LayerMask.NameToLayer("Road");
         nodeObject.transform.position = position;
         nodeObject.AddComponent<MeshFilter>().mesh = GenerateJunctionMesh(radius);
         nodeObject.AddComponent<MeshRenderer>().material = material;
