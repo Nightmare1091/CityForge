@@ -7,6 +7,32 @@ Build complete cities with roads, zones, and buildings — then export directly 
 
 ---
 
+## v0.4 — Grid System & Placement Validation
+
+Grid-based snapping system and foundational road placement validation.
+
+### What's new
+- Global grid with 1m cell snapping — all road points snap to the nearest meter
+- Directional grid visualizer appears while placing roads, showing subsection markers along the road direction
+- Grid scales dynamically with the road preview length
+- Basic placement validation: blocks roads shorter than 16m and duplicate edges
+- Red/green preview feedback — invalid placements shown in red before confirming
+- Existing roads highlight red when overlapping with new placement
+- Road and junction GameObjects now use a dedicated Road layer for physics queries
+
+### Demo
+
+**Grid snap and directional visualizer**
+![Grid snap](gifs/v0.4-grid-snap.gif)
+
+**Red preview on invalid placement**
+![Invalid placement](gifs/v0.4-invalid-preview.gif)
+
+**Curves without overlap**
+![Curves](gifs/v0.4-perfect-curves-overlay-system.gif)
+
+---
+
 ## v0.3 — Intersections & Midpoint Snap
 
 Full intersection system with automatic road subdivision and snapping at three points per road segment.
